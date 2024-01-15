@@ -2,6 +2,9 @@ from aiogram.fsm.state import State
 from aiogram.fsm.state import StatesGroup
 
 
+class Keyboard(StatesGroup):
+    keyboard = State()
+
 class StartState(StatesGroup):
     start_state = State()
 
@@ -13,6 +16,8 @@ class Rate(StatesGroup):
     student_choose = State()
     event_choose = State()
     mark_choose = State()
+    keyboard = State()
+    keyboard_finish = State()
     finish = State()
 
 

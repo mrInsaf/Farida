@@ -30,7 +30,6 @@ current_dir = os.path.dirname(os.path.realpath(__file__))
 # Добавляем текущий каталог в sys.path
 sys.path.append(current_dir)
 
-
 TOKEN = '6910756464:AAEWeQXTtuNnDHG3XrLIYDBC42ziAr7LfU8'
 dp = Dispatcher()
 
@@ -42,6 +41,12 @@ mark_types = {
     "presentation": "Презентация",
     "bashvat": "Головоломка",
     "test": "Тестирование",
+    "exam": "Экзамен",
+    "z_contr": "Заоч Контр",
+    "z_sem": "Заоч Семинар",
+    "z_test": "Заоч Тест",
+    "z_cross": "Заоч Кросс",
+    "shtraf": "Штраф",
 }
 
 max_scores = {
@@ -52,7 +57,20 @@ max_scores = {
     "presentation": 10,
     "bashvat": 10,
     "test": 8,
+    "exam": 40,
+    "z_contr": 30,
+    "z_sem": 6,
+    "z_cross": 4,
+    "shtraf": 0
 }
+
+keyboard_events = [
+    "exam",
+    "z_contr",
+    "z_sem",
+    "z_test",
+    "z_cross",
+]
 
 
 def create_kb():
@@ -147,7 +165,7 @@ async def rate_zveno_choose(callback: CallbackQuery, state: FSMContext):
     await state.update_data(grouped_students=grouped_students)
 
     for i in range(len(grouped_students)):
-        kb.add(InlineKeyboardButton(text=f"Звено {i+1}", callback_data=str(i)))
+        kb.add(InlineKeyboardButton(text=f"Звено {i + 1}", callback_data=str(i)))
     kb.adjust(1)
     await callback.message.answer(text="Выберите звено", reply_markup=kb.as_markup())
     await state.set_state(Rate.student_choose)
@@ -184,7 +202,12 @@ async def rate_event_choose(callback: CallbackQuery, state: FSMContext):
         await state.update_data(student=student)
 
     events = select_all_events()
-    for event in events:
+
+    current_date = datetime.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+    print(current_date)
+    upcoming_events = [event for event in events if datetime.datetime.strptime(event[2], "%d.%m.%Y") >= current_date]
+
+    for event in upcoming_events:
         btn_text = f"{event[2]} {mark_types[event[1]]}"
         callback_data = str(event[0])
         kb.add(
@@ -200,6 +223,7 @@ async def rate_mark_choose(callback: CallbackQuery, state: FSMContext):
     kb = create_kb()
     data = await state.get_data()
     event_id = callback.data
+    event_type = select_event_type_by_id(event_id)
     if check_grade_for_event_by_student(event_id, data['student']):
         kb = InlineKeyboardBuilder(
             [
@@ -212,21 +236,63 @@ async def rate_mark_choose(callback: CallbackQuery, state: FSMContext):
                                       reply_markup=kb.as_markup())
     else:
         await state.update_data(event=event_id)
+        print(event_type)
+        if event_type not in keyboard_events:
+            if event_type == "shtraf":
+                marks_list = [-1, -3, -5]
+            else:
+                marks_list = [1, 2, 3]
+            for mark in marks_list:
+                kb.add(
+                    InlineKeyboardButton(text=str(mark), callback_data=str(mark))
+                )
+            kb.adjust(1)
+            await callback.message.answer(text="Выберите оценку", reply_markup=kb.as_markup())
+            await state.set_state(Rate.finish)
+        else:
+            await state.set_state(Rate.keyboard)
+            await keyboard(callback, state)
 
-        marks_list = [1, 3, 5]
-        for mark in marks_list:
-            kb.add(
-                InlineKeyboardButton(text=str(mark), callback_data=str(mark))
-            )
-        kb.adjust(1)
-        await callback.message.answer(text="Выберите оценку", reply_markup=kb.as_markup())
+
+@dp.callback_query(Rate.keyboard)
+async def keyboard(callback: CallbackQuery, state: FSMContext):
+    print('yo')
+    kb = InlineKeyboardBuilder()
+    # Добавляем кнопки от 0 до 9 и кнопку "Ввод"
+    for i in range(1, 10):
+        kb.add(InlineKeyboardButton(text=str(i), callback_data=f"{str(i)}"))
+    kb.add(InlineKeyboardButton(text="0", callback_data="0"))
+    input_button = InlineKeyboardButton(text="Ввод", callback_data="Enter")
+    kb.add(input_button)
+    kb.adjust(3)
+    await callback.message.answer("Цифровая клавиатура", reply_markup=kb.as_markup())
+    await state.update_data(number="")
+    await state.set_state(Rate.keyboard_finish)
+
+
+@dp.callback_query(Rate.keyboard_finish)
+async def handle_digits(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    number = data["number"]
+    if callback.data != "Enter":
+        number += callback.data
+        print(number)
+        await state.update_data(number=number)
+    else:
+        await callback.message.answer(text=f"Вы ввели {number}")
+        await state.update_data(number="")
+        await state.update_data(mark=number)
         await state.set_state(Rate.finish)
+        await rate_finish(callback, state)
 
 
 @dp.callback_query(Rate.finish)
 async def rate_finish(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    mark = callback.data
+    if callback.data != "Enter":
+        mark = callback.data
+    else:
+        mark = data['mark']
     kb = InlineKeyboardBuilder(
         [
             [InlineKeyboardButton(text="Выбрать студента", callback_data="choose_another_student")],
@@ -344,7 +410,7 @@ async def show_grades_start(callback: CallbackQuery, state: FSMContext):
 async def show_grades_choose_group(callback: CallbackQuery, state: FSMContext):
     kb = create_kb()
     for i, month in enumerate(months):
-        kb.add(InlineKeyboardButton(text=month, callback_data=str(i+1)))
+        kb.add(InlineKeyboardButton(text=month, callback_data=str(i + 1)))
     kb.adjust(1, 3)
     group = callback.data
     await state.update_data(group=group)
