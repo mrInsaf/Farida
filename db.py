@@ -135,3 +135,10 @@ def select_total_grades_by_group(group: str):
         group by surname
         """
     )
+
+
+def select_total_grade_by_student(student_id: str):
+    return select(f'select sum(value) from grades where student_id = {student_id}')[0][0]
+
+
+

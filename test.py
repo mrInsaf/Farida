@@ -12,6 +12,6 @@ mark_types = {
     "test": "Тестирование",
 }
 
-student = Student("4", "СалаховИ. М.", 'biv202')
+student = Student("131", "СалаховИ. М.", 'biv202')
 
-print(select_all_events())
+print(select_total_grade_by_student(student.id))

@@ -30,7 +30,7 @@ current_dir = os.path.dirname(os.path.realpath(__file__))
 # Добавляем текущий каталог в sys.path
 sys.path.append(current_dir)
 
-TOKEN = '6910756464:AAEWeQXTtuNnDHG3XrLIYDBC42ziAr7LfU8'
+TOKEN = '6748840687:AAEah69Bw4LUvpc43bcGA_Hr19_u98TZiJo'
 dp = Dispatcher()
 
 mark_types = {
@@ -289,6 +289,7 @@ async def handle_digits(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(Rate.finish)
 async def rate_finish(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
+    student = data['student']
     if callback.data != "Enter":
         mark = callback.data
     else:
@@ -312,8 +313,10 @@ async def rate_finish(callback: CallbackQuery, state: FSMContext):
     else:
         event = select_event_by_id(data['event'])
         insert("grades", [data['student'].id, mark, data['event']])
+        total_grade = select_total_grade_by_student(student.id)
         await callback.message.answer(
-            text=f"Выставлена оценка\nСтудент: {data['student']}\nСобытие: {mark_types[event[0]]} {event[1]}\nОценка: {mark}",
+            text=f"Выставлена оценка\nСтудент: {data['student']}\nСобытие: {mark_types[event[0]]} {event[1]}\nОценка: "
+                 f"{mark}\nОбщая сумма баллов: {total_grade}",
             reply_markup=kb.as_markup()
         )
 
