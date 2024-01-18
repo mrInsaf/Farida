@@ -30,10 +30,10 @@ current_dir = os.path.dirname(os.path.realpath(__file__))
 # Добавляем текущий каталог в sys.path
 sys.path.append(current_dir)
 
-# TEST_TOKEN = "6748840687:AAEah69Bw4LUvpc43bcGA_Hr19_u98TZiJo"
-# MAIN_TOKEN = '6910756464:AAEWeQXTtuNnDHG3XrLIYDBC42ziAr7LfU8'
+TEST_TOKEN = "6748840687:AAEah69Bw4LUvpc43bcGA_Hr19_u98TZiJo"
+MAIN_TOKEN = '6910756464:AAEWeQXTtuNnDHG3XrLIYDBC42ziAr7LfU8'
 
-TOKEN = '6748840687:AAEah69Bw4LUvpc43bcGA_Hr19_u98TZiJo'
+# TOKEN = '6910756464:AAEWeQXTtuNnDHG3XrLIYDBC42ziAr7LfU8'
 dp = Dispatcher()
 
 mark_types = {
@@ -439,11 +439,19 @@ async def show_grades_finish(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer_document(file, reply_markup=kb.as_markup())
 
 
-async def main() -> None:
-    bot = Bot(TOKEN, parse_mode=ParseMode.HTML)
-    await dp.start_polling(bot)
+async def main(token: str) -> None:
+    if token == "test":
+        bot = Bot(TEST_TOKEN, parse_mode=ParseMode.HTML)
+        await dp.start_polling(bot)
+    else:
+        bot = Bot(MAIN_TOKEN, parse_mode=ParseMode.HTML)
+        await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    # logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    asyncio.run(main())
+    if len(sys.argv) != 2:
+        print("Usage: python main.py <token>")
+    else:
+        TOKEN = sys.argv[1]
+        asyncio.run(main(TOKEN))
+
