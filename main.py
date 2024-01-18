@@ -30,7 +30,10 @@ current_dir = os.path.dirname(os.path.realpath(__file__))
 # Добавляем текущий каталог в sys.path
 sys.path.append(current_dir)
 
-TOKEN = '6910756464:AAEWeQXTtuNnDHG3XrLIYDBC42ziAr7LfU8'
+# TEST_TOKEN = "6748840687:AAEah69Bw4LUvpc43bcGA_Hr19_u98TZiJo"
+# MAIN_TOKEN = '6910756464:AAEWeQXTtuNnDHG3XrLIYDBC42ziAr7LfU8'
+
+TOKEN = '6748840687:AAEah69Bw4LUvpc43bcGA_Hr19_u98TZiJo'
 dp = Dispatcher()
 
 mark_types = {
