@@ -14,4 +14,4 @@ mark_types = {
 
 student = Student("131", "СалаховИ. М.", 'biv202')
 
-print(select_total_grade_by_student(student.id))
+print(select_grades_by_month_and_group("01", "Б111-07"))

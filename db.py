@@ -114,16 +114,16 @@ def check_grade_for_event_by_student(event_id: str, student: Student):
 
 def select_grades_by_month_and_group(month: str, group: str):
     return select(
-        f'''with month_events as (
-        select id from events
-        where date like "__.{month}.____"
-        )
-        
-        select surname, sum(value) from grades g join month_events me
-        on g.event_id = me.id
-        join students s on g.student_id = s.id
-        where group_name = "{group}" 
-        group by student_id'''
+        f'''
+        SELECT surname, SUM(value) FROM grades g
+        JOIN (
+            SELECT id FROM events
+            WHERE date LIKE "%.{month}.____"
+        ) me ON g.event_id = me.id
+        JOIN students s ON g.student_id = s.id
+        WHERE group_name = "{group}" 
+        GROUP BY student_id
+        '''
     )
 
 
