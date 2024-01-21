@@ -41,8 +41,17 @@ def select_all_events():
     return select(f'select * from events')
 
 
-def select_type_and_date_events():
-    return select(f'select type, date from events order by date')
+def select_type_and_date_events_by_group(group_name: str):
+    return select(
+        f'''
+            select e.type, e.date from grades g 
+            join events e 
+            on e.id = g.event_id 
+            join students s on s.id = g.student_id
+            where s.group_name = "{group_name}"
+            group by e.id, e.date, e.type
+            order by date desc
+    ''')
 
 
 def select_event_by_id(event_id: int):
@@ -129,7 +138,8 @@ def select_grades_by_month_and_group(month: str, group: str):
 
 def select_total_grades_by_group(group: str):
     return select(
-        f"""select surname, sum(value) from grades g
+        f"""
+        select surname, sum(value) from grades g
         join students s on g.student_id = s.id
         where group_name = "{group}"
         group by surname

@@ -21,10 +21,9 @@ months = [
 
 
 def create_grades_table_of_group(group_name: str, date: str) -> str:
-    events = select_type_and_date_events()
-    print(events)
+    events = select_type_and_date_events_by_group(group_name)
     columns = ["За все время", f"За {months[int(date) - 1]}"]
-    events = [f"{mark_types[event[0]]} {event[1][:-5]}" for event in events[::-1]]
+    events = [f"{mark_types[event[0]]} {event[1][:-5]}" for event in events]
     columns.extend(events)
     students = select_students_by_group(group_name)
     main_df = pd.DataFrame(index=students, columns=columns)
@@ -37,8 +36,8 @@ def create_grades_table_of_group(group_name: str, date: str) -> str:
     for student in students:
         grades = select_grades_by_student(student)
         for grade in grades:
-            print(student)
-            event = f"{grade[1]} {grade[2]}"
+            event = f"{mark_types[grade[1]]} {grade[2][:-5]}"
+            print(event)
             value = grade[0]
             row_label, column_name = student, event
             main_df.at[row_label, column_name] = value
