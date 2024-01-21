@@ -1,6 +1,8 @@
 from db import *
 import pandas as pd
 import datetime
+from MarkTypes import mark_types
+
 
 months = [
     "Январь",
@@ -20,8 +22,9 @@ months = [
 
 def create_grades_table_of_group(group_name: str, date: str) -> str:
     events = select_type_and_date_events()
+    print(events)
     columns = ["За все время", f"За {months[int(date) - 1]}"]
-    events = [f"{event[0]} {event[1]}" for event in events]
+    events = [f"{mark_types[event[0]]} {event[1][:-5]}" for event in events[::-1]]
     columns.extend(events)
     students = select_students_by_group(group_name)
     main_df = pd.DataFrame(index=students, columns=columns)
@@ -41,6 +44,8 @@ def create_grades_table_of_group(group_name: str, date: str) -> str:
             main_df.at[row_label, column_name] = value
     current_time = datetime.datetime.now().strftime("%d-%m-%Y %H-%M-%S")
     summary_path = f"Summaries/Отчет_{group_name}---{current_time}.xlsx"
+    # columns = [column for column in main_df.columns]
+    # main_df.style.set_properties(subset=columns, **{'width': '600px'}).bar(width=100)
     main_df.to_excel(summary_path, )
     return summary_path
 

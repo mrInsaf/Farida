@@ -20,6 +20,7 @@ from db import *
 from models import *
 from add_group import *
 from show_grades import *
+from MarkTypes import mark_types
 
 import sys
 import os
@@ -36,21 +37,7 @@ MAIN_TOKEN = '6910756464:AAEWeQXTtuNnDHG3XrLIYDBC42ziAr7LfU8'
 # TOKEN = '6910756464:AAEWeQXTtuNnDHG3XrLIYDBC42ziAr7LfU8'
 dp = Dispatcher()
 
-mark_types = {
-    "sem": "Посещение",
-    "conspect": "Конспект",
-    "srs": "СРС",
-    "doklad": "Доклад",
-    "presentation": "Презентация",
-    "bashvat": "Головоломка",
-    "test": "Тестирование",
-    "exam": "Экзамен",
-    "z_contr": "Заоч Контр",
-    "z_sem": "Заоч Семинар",
-    "z_test": "Заоч Тест",
-    "z_cross": "Заоч Кросс",
-    "shtraf": "Штраф",
-}
+
 
 max_scores = {
     "sem": 8,

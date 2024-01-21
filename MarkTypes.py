@@ -1,7 +1,3 @@
-from db import *
-from add_group import *
-from show_grades import *
-
 mark_types = {
     "sem": "Посещение",
     "conspect": "Конспект",
@@ -10,10 +6,10 @@ mark_types = {
     "presentation": "Презентация",
     "bashvat": "Головоломка",
     "test": "Тестирование",
+    "exam": "Экзамен",
+    "z_contr": "Заоч Контр",
+    "z_sem": "Заоч Семинар",
+    "z_test": "Заоч Тест",
+    "z_cross": "Заоч Кросс",
+    "shtraf": "Штраф",
 }
-
-student = Student("131", "СалаховИ. М.", 'biv202')
-
-# print(select_grades_by_month_and_group("01", "Б111-07"))
-
-print(create_grades_table_of_group('Б111-07', '01'))
