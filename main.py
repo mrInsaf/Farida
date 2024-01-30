@@ -39,8 +39,6 @@ MAIN_TOKEN = '6910756464:AAEWeQXTtuNnDHG3XrLIYDBC42ziAr7LfU8'
 # TOKEN = '6910756464:AAEWeQXTtuNnDHG3XrLIYDBC42ziAr7LfU8'
 dp = Dispatcher()
 
-
-
 max_scores = {
     "sem": 8,
     "conspect": 8,
@@ -92,9 +90,8 @@ async def show_student_list(message: Message) -> bool:
 
 async def show_groups_list(callback: CallbackQuery):
     kb = create_kb()
-    teacher_name = callback.from_user.id
-    print(teacher_name)
-    groups = select_groups_by_teacher(str(teacher_name))
+    teacher_id = callback.from_user.id
+    groups = select_groups_by_teacher_id(teacher_id)
     for group in groups:
         kb.add(InlineKeyboardButton(text=group[0], callback_data=str(group[1])))
     kb.adjust(1)
@@ -102,9 +99,9 @@ async def show_groups_list(callback: CallbackQuery):
 
 
 @dp.callback_query(F.data == "to_start")
-@dp.callback_query(F.data == "back",
-                   Rate.zveno_choose,
-                   )
+@dp.callback_query(F.data == "back", Rate.zveno_choose)
+@dp.callback_query(F.data == "back", ShowGrades.choose_group)
+@dp.callback_query(F.data == "back", CreateEvent.choose_type)
 async def start_command(callback: types.CallbackQuery, state: FSMContext):
     print(await state.get_state())
     await state.set_state(StartState.start_state)
@@ -209,7 +206,7 @@ async def rate_event_choose(callback: CallbackQuery, state: FSMContext):
         student = find_student_by_surname(callback.data)
         await state.update_data(student=student)
 
-    events = select_all_events()
+    events = select_all_events_by_teacher_id()
 
     current_date = datetime.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
     print(current_date)
@@ -379,8 +376,8 @@ async def create_event_choose_date(message: types.Message, state: FSMContext):
 @dp.message(CreateEvent.finish)
 async def create_event_finish(message: types.Message, state: FSMContext):
     data = await state.get_data()
-    insert("events", [data['type'], data['date']])
-    await message.answer(text=f"Событие {mark_types[data['type']]}, {data['date']} добавлено")
+    insert("events", [data['type'], data['date'], message.from_user.id])
+    await message.answer(text=f"Событие {mark_types[data['type']]}, {data['date']} добавлено. Нажмите /start")
     await state.set_state(StartState.start_state)
 
 
@@ -392,7 +389,7 @@ async def add_group_start(callback: CallbackQuery, state: FSMContext):
 
 @dp.message(AddGroup.input_group_name)
 async def add_group_input_group_name(message: Message, state: FSMContext, bot: Bot):
-    teacher_name = str(message.from_user.id)
+    teacher_id = message.from_user.id
     document = message.document
     file_id = document.file_id
     file_name = document.file_name
@@ -406,8 +403,8 @@ async def add_group_input_group_name(message: Message, state: FSMContext, bot: B
         with open(f'./{file_name}', 'wb') as new_file:
             new_file.write(downloaded_file.read())
 
-        insert_group(file_name[:-4], file_name, teacher_name)
-        await message.answer(text=f"Группа {file_name[:-4]} добавлена")
+        insert_group(file_name[:-4], file_name, teacher_id)
+        await message.answer(text=f"Группа {file_name[:-4]} добавлена. Нажмите /start")
     else:
         await message.answer(text=f"Что-то пошло не так")
 
@@ -418,7 +415,7 @@ async def show_grades_start(callback: CallbackQuery, state: FSMContext):
     await state.set_state(ShowGrades.choose_group)
 
 
-@dp.callback_query(ShowGrades.choose_group)
+@dp.callback_query(F.data != "back", ShowGrades.choose_group)
 async def show_grades_choose_group(callback: CallbackQuery, state: FSMContext):
     kb = create_kb()
     for i, month in enumerate(months):
@@ -477,7 +474,7 @@ async def login(callback: CallbackQuery, state: FSMContext):
 
 
 @dp.message(Login.password)
-async def login_input_password(message: Message, state:FSMContext):
+async def login_input_password(message: Message, state: FSMContext):
     teacher_id = message.from_user.id
     hashed_password = get_hashed_password(teacher_id)
     if check_password(message.text, hashed_password):
@@ -499,7 +496,7 @@ async def exit(callback: CallbackQuery, state: FSMContext):
 
 
 @dp.callback_query(Exit.exit)
-async def exit(callback: CallbackQuery, state: FSMContext):
+async def logout(callback: CallbackQuery, state: FSMContext):
     if callback.data == "yes":
         unauthorise_teacher(callback.from_user.id)
         await callback.message.answer(text="Успешный выход, нажмите /start")
@@ -520,4 +517,3 @@ if __name__ == "__main__":
     else:
         TOKEN = sys.argv[1]
         asyncio.run(main(TOKEN))
-

@@ -45,8 +45,9 @@ def find_student_by_surname(surname: str):
     return Student(*student_data)
 
 
-def select_all_events():
-    return select(f'select * from events')
+def select_all_events_by_teacher_id():
+    return select(f'select * from events e '
+                  f'join teachers t on e.teacher_id = t.teacher_id ')
 
 
 def select_type_and_date_events_by_group_id(group_id: str):
@@ -88,8 +89,8 @@ def calculate_score_of_student_by_event_type(student: Student, event_id: str):
 def select_teacher_id_by_name(teacher_name: str):
     return select(f'select id from teachers where name = "{teacher_name}"')[0][0]
 
-def add_group_to_db(group_name: str, teacher_name: str):
-    teacher_id = select_teacher_id_by_name(teacher_name)
+
+def add_group_to_db(group_name: str, teacher_id: int):
     return insert("groups", [group_name, teacher_id])
 
 
@@ -97,11 +98,11 @@ def select_last_group_id():
     return select(f'select max(id) from groups')
 
 
-def select_groups_by_teacher(teacher_name: str):
+def select_groups_by_teacher_id(teacher_id: int):
     return select(f'''
     select g.name, g.id from groups g
-    join teachers t on g.teacher_id = t.id
-    where t.name = "{teacher_name}"
+    join teachers t on g.teacher_id = t.teacher_id
+    where t.teacher_id = "{teacher_id}"
     ''')
 
 
