@@ -21,6 +21,8 @@ from models import *
 from add_group import *
 from show_grades import *
 from MarkTypes import mark_types
+from authorised_users import authorised_users
+from crypt import *
 
 import sys
 import os
@@ -90,9 +92,11 @@ async def show_student_list(message: Message) -> bool:
 
 async def show_groups_list(callback: CallbackQuery):
     kb = create_kb()
-    groups = select_groups_from_db()
+    teacher_name = callback.from_user.id
+    print(teacher_name)
+    groups = select_groups_by_teacher(str(teacher_name))
     for group in groups:
-        kb.add(InlineKeyboardButton(text=group[0], callback_data=group[0]))
+        kb.add(InlineKeyboardButton(text=group[0], callback_data=str(group[1])))
     kb.adjust(1)
     await callback.message.answer(text="Выберите группу", reply_markup=kb.as_markup())
 
@@ -118,15 +122,28 @@ async def start_command(callback: types.CallbackQuery, state: FSMContext):
 @dp.message(StartState.start_state)
 @dp.message(Command('start'))
 async def start_command(message: types.Message, state: FSMContext):
-    await state.set_state(StartState.start_state)
-    kb = create_kb()
-    kb.add(
-        InlineKeyboardButton(text="Выставить оценку", callback_data="rate"),
-        InlineKeyboardButton(text="Посмотреть оценки", callback_data="show_grades"),
-        InlineKeyboardButton(text="Создать событие", callback_data="create_event"),
-        InlineKeyboardButton(text="Добавить группу", callback_data="add_group"),
-    )
-    kb.adjust(1)
+    kb = InlineKeyboardBuilder()
+    teacher_id = message.from_user.id
+    if not check_teacher_exists(teacher_id):
+        kb.add(
+            InlineKeyboardButton(text="Зарегистрироваться", callback_data="register"),
+        )
+    else:
+        if not check_auth_by_teacher_id(teacher_id):
+            kb.add(
+                InlineKeyboardButton(text="Войти", callback_data="login")
+            )
+        else:
+            await state.set_state(StartState.start_state)
+
+            kb.add(
+                InlineKeyboardButton(text="Выставить оценку", callback_data="rate"),
+                InlineKeyboardButton(text="Посмотреть оценки", callback_data="show_grades"),
+                InlineKeyboardButton(text="Создать событие", callback_data="create_event"),
+                InlineKeyboardButton(text="Добавить группу", callback_data="add_group"),
+                InlineKeyboardButton(text="Выйти", callback_data="exit"),
+            )
+            kb.adjust(1)
     await message.answer(text="Выберите действие", reply_markup=kb.as_markup())
     print(await state.get_state())
 
@@ -144,12 +161,13 @@ async def rate_zveno_choose(callback: CallbackQuery, state: FSMContext):
     kb = create_kb()
     if callback.data != "back":
         group = callback.data
+        print(group)
         await state.update_data(group=group)
     else:
         data = await state.get_data()
         group = data['group']
 
-    students = select_students_by_group(group)
+    students = select_students_by_group_id(group)
     group_size = 4
     grouped_students = [students[i:i + group_size] for i in range(0, len(students), group_size)]
     await state.update_data(grouped_students=grouped_students)
@@ -374,6 +392,7 @@ async def add_group_start(callback: CallbackQuery, state: FSMContext):
 
 @dp.message(AddGroup.input_group_name)
 async def add_group_input_group_name(message: Message, state: FSMContext, bot: Bot):
+    teacher_name = str(message.from_user.id)
     document = message.document
     file_id = document.file_id
     file_name = document.file_name
@@ -387,7 +406,7 @@ async def add_group_input_group_name(message: Message, state: FSMContext, bot: B
         with open(f'./{file_name}', 'wb') as new_file:
             new_file.write(downloaded_file.read())
 
-        insert_group(file_name[:-4], file_name)
+        insert_group(file_name[:-4], file_name, teacher_name)
         await message.answer(text=f"Группа {file_name[:-4]} добавлена")
     else:
         await message.answer(text=f"Что-то пошло не так")
@@ -424,6 +443,49 @@ async def show_grades_finish(callback: CallbackQuery, state: FSMContext):
     summary_path = create_grades_table_of_group(group, month)
     file = FSInputFile(summary_path)
     await callback.message.answer_document(file, reply_markup=kb.as_markup())
+
+
+@dp.callback_query(F.data == "register")
+async def register(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer(text="Придумайте и введите пароль")
+    await state.set_state(Registration.input_password)
+
+
+@dp.message(Registration.input_password)
+async def confirm_password(message: Message, state: FSMContext):
+    await state.update_data(password=message.text)
+    await message.answer(text="Повторите пароль")
+    await state.set_state(Registration.confirm_password)
+
+
+@dp.message(Registration.confirm_password)
+async def registration_finish(message: Message, state: FSMContext):
+    data = await state.get_data()
+    password = data['password']
+    if message.text == password:
+        ecnrypted_password = encrypt_password(password)
+        register_teacher(message.from_user.id, ecnrypted_password)
+        await message.answer(text="Успешная регистрация. Нажмите /start")
+    else:
+        await message.answer(text="Пароли не совпадают, введите еще раз")
+
+
+@dp.callback_query(F.data == "login")
+async def login(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer(text="Введите пароль")
+    await state.set_state(Login.password)
+
+
+@dp.message(Login.password)
+async def login_input_password(message: Message, state:FSMContext):
+    teacher_id = message.from_user.id
+    hashed_password = get_hashed_password(teacher_id)
+    if check_password(message.text, hashed_password):
+        authorise_teacher(teacher_id)
+        await message.answer(text="Успешный вход, нажмите /start")
+        await state.set_state(StartState.start_state)
+    else:
+        await message.answer(text="Неверный пароль, попробуйте еще раз")
 
 
 async def main(token: str) -> None:

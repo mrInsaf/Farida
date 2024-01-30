@@ -9,6 +9,17 @@ class StartState(StatesGroup):
     start_state = State()
 
 
+class Registration(StatesGroup):
+    input_password = State()
+    confirm_password = State()
+
+
+class Login(StatesGroup):
+    login = State()
+    password = State()
+
+
+
 class Rate(StatesGroup):
     # student_input = State()
     group_input = State()

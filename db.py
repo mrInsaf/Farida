@@ -28,27 +28,35 @@ def insert(table_name: str, data_list: list, auto_increment_id: int = 1):
 
     # Вставляем данные в таблицу
     cursor.execute(query, data_list)
+    row_id = cursor.lastrowid
     conn.commit()
+    return row_id
+
+
+
 
 
 def find_student_by_surname(surname: str):
-    student_data = select(f'select id, surname, group_name from students where surname = "{surname}"')[0]
-    id, surname, group = student_data
-    return Student(id, surname, group)
+    student_data = select(
+        f'''select s.id, surname, group_name, group_id from students s 
+            join groups g on g.id = s.group_id
+            where surname = "{surname}"''')[0]
+    print(student_data)
+    return Student(*student_data)
 
 
 def select_all_events():
     return select(f'select * from events')
 
 
-def select_type_and_date_events_by_group(group_name: str):
+def select_type_and_date_events_by_group_id(group_id: str):
     return select(
         f'''
             select e.type, e.date from grades g 
             join events e 
             on e.id = g.event_id 
             join students s on s.id = g.student_id
-            where s.group_name = "{group_name}"
+            where s.group_id = {group_id}
             group by e.id, e.date, e.type
             order by date desc
     ''')
@@ -77,27 +85,45 @@ def calculate_score_of_student_by_event_type(student: Student, event_id: str):
     else:
         return total_score[0][0]
 
+def select_teacher_id_by_name(teacher_name: str):
+    return select(f'select id from teachers where name = "{teacher_name}"')[0][0]
 
-def add_group_to_db(group_name: str):
-    insert("groups", [group_name])
+def add_group_to_db(group_name: str, teacher_name: str):
+    teacher_id = select_teacher_id_by_name(teacher_name)
+    return insert("groups", [group_name, teacher_id])
 
 
-def select_groups_from_db():
-    return select(f'select name from groups')
+def select_last_group_id():
+    return select(f'select max(id) from groups')
 
 
-def select_students_by_group(group_name: str) -> list:
-    lst = select(f'select surname from students where group_name = "{group_name}"')
+def select_groups_by_teacher(teacher_name: str):
+    return select(f'''
+    select g.name, g.id from groups g
+    join teachers t on g.teacher_id = t.id
+    where t.name = "{teacher_name}"
+    ''')
+
+
+def select_students_by_group_id(group_id: str) -> list:
+    lst = select(
+        f'''
+        select surname from students s 
+         join groups g on s.group_id = g.id
+         where group_id = {group_id}
+        
+        ''')
     students = [student[0] for student in lst]
     return students
 
 
-def select_grades_by_group(group_name: str):
+def select_grades_by_group_id(group_id: str):
     return select(
         f"""select s.surname, value, e.type, e.date from grades g 
         join students s on g.student_id = s.id 
         join events e on g.event_id = e.id
-        where group_name = "{group_name}"
+        join groups gr on s.group_id = gr.id
+        where group_id = {group_id}
         order by date"""
     )
 
@@ -121,7 +147,7 @@ def check_grade_for_event_by_student(event_id: str, student: Student):
         return True
 
 
-def select_grades_by_month_and_group(month: str, group: str):
+def select_grades_by_month_and_group_id(month: str, group_id: str):
     return select(
         f'''
         SELECT surname, SUM(value) FROM grades g
@@ -130,18 +156,20 @@ def select_grades_by_month_and_group(month: str, group: str):
             WHERE date LIKE "%.{month}.____"
         ) me ON g.event_id = me.id
         JOIN students s ON g.student_id = s.id
-        WHERE group_name = "{group}" 
+        join groups gr on s.group_id = gr.id
+        WHERE group_id = {group_id}
         GROUP BY student_id
         '''
     )
 
 
-def select_total_grades_by_group(group: str):
+def select_total_grades_by_group_id(group_id: str):
     return select(
         f"""
         select surname, sum(value) from grades g
         join students s on g.student_id = s.id
-        where group_name = "{group}"
+        join groups gr on s.group_id = gr.id
+        where group_id = {group_id}
         group by surname
         """
     )
@@ -151,4 +179,31 @@ def select_total_grade_by_student(student_id: str):
     return select(f'select sum(value) from grades where student_id = {student_id}')[0][0]
 
 
+def check_teacher_exists(teacher_id: int):
+    return select(f'select id from teachers where teacher_id = {teacher_id}')
 
+
+def check_auth_by_teacher_id(teacher_id: int):
+    auth = select(f'select is_authorised from teachers where teacher_id = {teacher_id}')[0][0]
+    if auth == 1:
+        return True
+    else:
+        return False
+
+
+def register_teacher(teacher_id: int, encrypted_password: str):
+    insert("teachers", [teacher_id, encrypted_password, 0, "-"])
+
+
+def get_hashed_password(teacher_id: int):
+    hashed_password = select(f'select password from teachers where teacher_id = {teacher_id}')[0][0]
+    return hashed_password
+
+
+def authorise_teacher(teacher_id: int):
+    current_datetime = datetime.now()
+    formatted_datetime = current_datetime.strftime("%d.%m.%Y %H:%M:%S")
+    cursor.execute('UPDATE teachers SET is_authorised = 1, auth_dttm = ? WHERE teacher_id = ?', (formatted_datetime, teacher_id))
+
+    # Применяем изменения
+    conn.commit()
