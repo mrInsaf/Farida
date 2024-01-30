@@ -488,6 +488,23 @@ async def login_input_password(message: Message, state:FSMContext):
         await message.answer(text="Неверный пароль, попробуйте еще раз")
 
 
+@dp.callback_query(F.data == "exit")
+async def exit(callback: CallbackQuery, state: FSMContext):
+    kb = InlineKeyboardBuilder()
+    kb.add(InlineKeyboardButton(text="Нет", callback_data="no"))
+    kb.add(InlineKeyboardButton(text="Да", callback_data="yes"))
+    kb.adjust(1)
+    await callback.message.answer(text="Точно выйти?", reply_markup=kb.as_markup())
+    await state.set_state(Exit.exit)
+
+
+@dp.callback_query(Exit.exit)
+async def exit(callback: CallbackQuery, state: FSMContext):
+    if callback.data == "yes":
+        unauthorise_teacher(callback.from_user.id)
+        await callback.message.answer(text="Успешный выход, нажмите /start")
+
+
 async def main(token: str) -> None:
     if token == "test":
         bot = Bot(TEST_TOKEN, parse_mode=ParseMode.HTML)

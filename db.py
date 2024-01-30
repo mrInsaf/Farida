@@ -207,3 +207,6 @@ def authorise_teacher(teacher_id: int):
 
     # Применяем изменения
     conn.commit()
+
+def unauthorise_teacher(teacher_id: int):
+    cursor.execute(f'UPDATE teachers SET is_authorised = 0 WHERE teacher_id = {teacher_id}')

@@ -19,6 +19,9 @@ class Login(StatesGroup):
     password = State()
 
 
+class Exit(StatesGroup):
+    exit = State()
+
 
 class Rate(StatesGroup):
     # student_input = State()
