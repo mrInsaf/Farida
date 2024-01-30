@@ -10,11 +10,11 @@ def add_students_from_text_file(text_file_path: str):
     return student_list
 
 
-def insert_group(group_name: str, text_file_path: str):
+def insert_group(group_name: str, text_file_path: str, teacher_name: str):
     student_list = add_students_from_text_file(text_file_path)
-    add_group_to_db(group_name)
+    group_id = add_group_to_db(group_name, teacher_name)
     for student in student_list:
-        insert("students", [student, group_name])
+        insert("students", [student, group_name, group_id])
 
 
 # def check_same_group(student_list: list) -> bool:

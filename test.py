@@ -12,11 +12,16 @@ mark_types = {
     "test": "Тестирование",
 }
 
-student = Student("131", "СалаховИ. М.", 'biv202')
+# student = Student("131", "СалаховИ. М.", 'biv202')
 
-# print(select_grades_by_month_and_group("01", "Б111-07"))
+# print(find_student_by_surname("Платон"))
 
-print(create_grades_table_of_group('Б111-07', '01'))
+# print(select_groups_by_teacher("Insaf"))
+#
+# print(select_last_group_id())
 
-# print(select_type_and_date_events_by_group('Б111-07'))
+# print(select_teacher_id_by_name('816831722'))
 
+# print(add_group_to_db("yoo2o", '816831722'))
+
+print(authorise_teacher("yp"))
