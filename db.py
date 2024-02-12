@@ -41,13 +41,16 @@ def find_student_by_surname(surname: str):
         f'''select s.id, surname, group_name, group_id from students s 
             join groups g on g.id = s.group_id
             where surname = "{surname}"''')[0]
-    print(student_data)
     return Student(*student_data)
 
 
-def select_all_events_by_teacher_id():
+def select_all_events_by_teacher_id(teacher_id: int):
     return select(f'select * from events e '
-                  f'join teachers t on e.teacher_id = t.teacher_id ')
+                  f'join teachers t on e.teacher_id = t.teacher_id '
+                  f'where t.teacher_id = "{teacher_id}"')
+
+
+# def select_visit_events_by_teacher_id()
 
 
 def select_type_and_date_events_by_group_id(group_id: str):
@@ -211,3 +214,6 @@ def authorise_teacher(teacher_id: int):
 
 def unauthorise_teacher(teacher_id: int):
     cursor.execute(f'UPDATE teachers SET is_authorised = 0 WHERE teacher_id = {teacher_id}')
+
+
+

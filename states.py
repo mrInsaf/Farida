@@ -51,3 +51,11 @@ class ShowGrades(StatesGroup):
     choose_group = State()
 
 
+class RateVisit(StatesGroup):
+    choose_group = State()
+    choose_event = State()
+    choose_zveno = State()
+    show_student_list = State()
+    choose_student = State()
+    finish = State()
+

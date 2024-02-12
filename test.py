@@ -12,16 +12,6 @@ mark_types = {
     "test": "Тестирование",
 }
 
-# student = Student("131", "СалаховИ. М.", 'biv202')
+student = Student("281", "СалаховИ. М.", 'biv202', "2")
 
-# print(find_student_by_surname("Платон"))
-
-# print(select_groups_by_teacher("Insaf"))
-#
-# print(select_last_group_id())
-
-# print(select_teacher_id_by_name('816831722'))
-
-# print(add_group_to_db("yoo2o", '816831722'))
-
-print(authorise_teacher("yp"))
+print(check_grade_for_event_by_student("50", student))

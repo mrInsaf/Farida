@@ -4,6 +4,7 @@ import sys
 from aiogram import Bot, Dispatcher, Router, types
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
+from aiogram.methods import EditMessageText
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardButton, KeyboardButton, InlineKeyboardMarkup, CallbackQuery, ReplyKeyboardMarkup
@@ -38,6 +39,8 @@ MAIN_TOKEN = '6910756464:AAEWeQXTtuNnDHG3XrLIYDBC42ziAr7LfU8'
 
 # TOKEN = '6910756464:AAEWeQXTtuNnDHG3XrLIYDBC42ziAr7LfU8'
 dp = Dispatcher()
+
+bot = None
 
 max_scores = {
     "sem": 8,
@@ -90,7 +93,9 @@ async def show_student_list(message: Message) -> bool:
 
 async def show_groups_list(callback: CallbackQuery):
     kb = create_kb()
+
     teacher_id = callback.from_user.id
+    print(teacher_id)
     groups = select_groups_by_teacher_id(teacher_id)
     for group in groups:
         kb.add(InlineKeyboardButton(text=group[0], callback_data=str(group[1])))
@@ -98,19 +103,81 @@ async def show_groups_list(callback: CallbackQuery):
     await callback.message.answer(text="Выберите группу", reply_markup=kb.as_markup())
 
 
+async def show_zveno_list(callback: CallbackQuery, state: FSMContext):
+    kb = create_kb()
+    if callback.data != "back" and callback.data != "choose_zveno":
+        group = callback.data
+        await state.update_data(group=group)
+    else:
+        data = await state.get_data()
+        group = data['group']
+
+    students = select_students_by_group_id(group)
+    group_size = 4
+    grouped_students = [students[i:i + group_size] for i in range(0, len(students), group_size)]
+    await state.update_data(grouped_students=grouped_students)
+
+    for i in range(len(grouped_students)):
+        kb.add(InlineKeyboardButton(text=f"Звено {i + 1}", callback_data=str(i)))
+    kb.adjust(1)
+    await callback.message.answer(text="Выберите звено", reply_markup=kb.as_markup())
+
+
+async def show_students_list(callback: CallbackQuery, state: FSMContext, text: str = "студента"):
+    kb = create_kb()
+    data = await state.get_data()
+    if callback.data != "choose_another_student" and callback.data != "back":
+        zveno = int(callback.data)
+        await state.update_data(zveno=zveno)
+    else:
+        zveno = data['zveno']
+    grouped_students = data['grouped_students']
+
+    for student in grouped_students[zveno]:
+        kb.add(InlineKeyboardButton(text=student, callback_data=student))
+    kb.adjust(1)
+    await callback.message.answer(text=f"Выберите {text}", reply_markup=kb.as_markup())
+
+
+async def show_event_list(callback: CallbackQuery, state: FSMContext, visit: bool):
+    kb = create_kb()
+
+    if callback.data != "back":
+        if not visit:
+            student = find_student_by_surname(callback.data)
+            await state.update_data(student=student)
+
+
+    events = select_all_events_by_teacher_id(callback.from_user.id)
+
+    current_date = datetime.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+    upcoming_events = [event for event in events if datetime.datetime.strptime(event[2], "%d.%m.%Y") >= current_date]
+
+    for event in upcoming_events:
+        btn_text = f"{event[2]} {mark_types[event[1]]}"
+        callback_data = str(event[0])
+        kb.add(
+            InlineKeyboardButton(text=btn_text, callback_data=callback_data)
+        )
+    kb.adjust(1)
+    await callback.message.answer(text="Выберите оцениваемое событие", reply_markup=kb.as_markup())
+
+
 @dp.callback_query(F.data == "to_start")
 @dp.callback_query(F.data == "back", Rate.zveno_choose)
 @dp.callback_query(F.data == "back", ShowGrades.choose_group)
 @dp.callback_query(F.data == "back", CreateEvent.choose_type)
+@dp.callback_query(F.data == "back", RateVisit.choose_group)
 async def start_command(callback: types.CallbackQuery, state: FSMContext):
-    print(await state.get_state())
     await state.set_state(StartState.start_state)
     kb = create_kb()
     kb.add(
         InlineKeyboardButton(text="Выставить оценку", callback_data="rate"),
+        InlineKeyboardButton(text="Выставить посещение", callback_data="rate_visit"),
         InlineKeyboardButton(text="Посмотреть оценки", callback_data="show_grades"),
         InlineKeyboardButton(text="Создать событие", callback_data="create_event"),
         InlineKeyboardButton(text="Добавить группу", callback_data="add_group"),
+        InlineKeyboardButton(text="Выйти", callback_data="exit"),
     )
     kb.adjust(1)
     await callback.message.answer(text="Выберите действие", reply_markup=kb.as_markup())
@@ -135,6 +202,7 @@ async def start_command(message: types.Message, state: FSMContext):
 
             kb.add(
                 InlineKeyboardButton(text="Выставить оценку", callback_data="rate"),
+                InlineKeyboardButton(text="Выставить посещение", callback_data="rate_visit"),
                 InlineKeyboardButton(text="Посмотреть оценки", callback_data="show_grades"),
                 InlineKeyboardButton(text="Создать событие", callback_data="create_event"),
                 InlineKeyboardButton(text="Добавить группу", callback_data="add_group"),
@@ -142,7 +210,6 @@ async def start_command(message: types.Message, state: FSMContext):
             )
             kb.adjust(1)
     await message.answer(text="Выберите действие", reply_markup=kb.as_markup())
-    print(await state.get_state())
 
 
 @dp.callback_query(F.data == "rate")
@@ -155,24 +222,7 @@ async def rate_student_start(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(Rate.zveno_choose)
 @dp.callback_query(F.data == "back", Rate.event_choose)
 async def rate_zveno_choose(callback: CallbackQuery, state: FSMContext):
-    kb = create_kb()
-    if callback.data != "back":
-        group = callback.data
-        print(group)
-        await state.update_data(group=group)
-    else:
-        data = await state.get_data()
-        group = data['group']
-
-    students = select_students_by_group_id(group)
-    group_size = 4
-    grouped_students = [students[i:i + group_size] for i in range(0, len(students), group_size)]
-    await state.update_data(grouped_students=grouped_students)
-
-    for i in range(len(grouped_students)):
-        kb.add(InlineKeyboardButton(text=f"Звено {i + 1}", callback_data=str(i)))
-    kb.adjust(1)
-    await callback.message.answer(text="Выберите звено", reply_markup=kb.as_markup())
+    await show_zveno_list(callback, state)
     await state.set_state(Rate.student_choose)
 
 
@@ -180,46 +230,14 @@ async def rate_zveno_choose(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "back", Rate.mark_choose)
 @dp.callback_query(Rate.student_choose)
 async def rate_student_choose(callback: CallbackQuery, state: FSMContext):
-    kb = create_kb()
-    data = await state.get_data()
-    if callback.data != "choose_another_student" and callback.data != "back":
-        zveno = int(callback.data)
-        await state.update_data(zveno=zveno)
-    else:
-        zveno = data['zveno']
-    grouped_students = data['grouped_students']
-
-    for student in grouped_students[zveno]:
-        kb.add(InlineKeyboardButton(text=student, callback_data=student))
-    kb.adjust(1)
-    await callback.message.answer(text="Выберите студента", reply_markup=kb.as_markup())
+    await show_students_list(callback, state)
     await state.set_state(Rate.event_choose)
 
 
 @dp.callback_query(Rate.event_choose)
 @dp.callback_query(F.data == "back", Rate.finish)
 async def rate_event_choose(callback: CallbackQuery, state: FSMContext):
-    kb = create_kb()
-    print(callback.data)
-
-    if callback.data != "back":
-        student = find_student_by_surname(callback.data)
-        await state.update_data(student=student)
-
-    events = select_all_events_by_teacher_id()
-
-    current_date = datetime.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
-    print(current_date)
-    upcoming_events = [event for event in events if datetime.datetime.strptime(event[2], "%d.%m.%Y") >= current_date]
-
-    for event in upcoming_events:
-        btn_text = f"{event[2]} {mark_types[event[1]]}"
-        callback_data = str(event[0])
-        kb.add(
-            InlineKeyboardButton(text=btn_text, callback_data=callback_data)
-        )
-    kb.adjust(1)
-    await callback.message.answer(text="Выберите оцениваемое событие", reply_markup=kb.as_markup())
+    await show_event_list(callback, state, False)
     await state.set_state(Rate.mark_choose)
 
 
@@ -241,7 +259,6 @@ async def rate_mark_choose(callback: CallbackQuery, state: FSMContext):
                                       reply_markup=kb.as_markup())
     else:
         await state.update_data(event=event_id)
-        print(event_type)
         if event_type not in keyboard_events:
             if event_type == "shtraf":
                 marks_list = [-1, -3, -5]
@@ -261,7 +278,6 @@ async def rate_mark_choose(callback: CallbackQuery, state: FSMContext):
 
 @dp.callback_query(Rate.keyboard)
 async def keyboard(callback: CallbackQuery, state: FSMContext):
-    print('yo')
     kb = InlineKeyboardBuilder()
     # Добавляем кнопки от 0 до 9 и кнопку "Ввод"
     for i in range(1, 10):
@@ -281,7 +297,6 @@ async def handle_digits(callback: CallbackQuery, state: FSMContext):
     number = data["number"]
     if callback.data != "Enter":
         number += callback.data
-        print(number)
         await state.update_data(number=number)
     else:
         await callback.message.answer(text=f"Вы ввели {number}")
@@ -311,7 +326,8 @@ async def rate_finish(callback: CallbackQuery, state: FSMContext):
     if int(event_score) + int(mark) > max_scores[event_type]:
         await callback.message.answer(
             text=f"Выбранный балл {mark} + накопленный балл {event_score} "
-                 f"превышает максимальный за тип {event_type} ({max_scores[event_type]})",
+                 f"превышает максимальный за тип {event_type} ({max_scores[event_type]} для {student}"
+                 f")",
             reply_markup=kb.as_markup()
         )
         await state.set_state(StartState.start_state)
@@ -502,7 +518,92 @@ async def logout(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer(text="Успешный выход, нажмите /start")
 
 
+@dp.callback_query(F.data == "rate_visit")
+@dp.callback_query(F.data == "back", RateVisit.choose_zveno)
+async def rate_visit_start(callback: CallbackQuery, state: FSMContext):
+    await show_event_list(callback, state, True)
+    await state.set_state(RateVisit.choose_group)
+
+
+@dp.callback_query(RateVisit.choose_group)
+@dp.callback_query(F.data == "back", RateVisit.show_student_list)
+async def rate_visit_choose_group(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(event_id=callback.data)
+    await show_groups_list(callback)
+    await state.set_state(RateVisit.choose_zveno)
+
+
+@dp.callback_query(F.data == "choose_zveno")
+@dp.callback_query(RateVisit.choose_zveno)
+@dp.callback_query(F.data == "back", RateVisit.choose_student)
+async def rate_visit_choose_zveno(callback: CallbackQuery, state: FSMContext):
+    await show_zveno_list(callback, state)
+    await state.update_data(visited_list=[])
+    await state.set_state(RateVisit.show_student_list)
+
+
+@dp.callback_query(RateVisit.show_student_list)
+async def rate_visit_show_student_list(callback: CallbackQuery, state: FSMContext):
+    kb = [
+        [KeyboardButton(text="Подтвердить")]
+    ]
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=kb,
+        resize_keyboard=True,
+        input_field_placeholder="Для подтверждения списка студентов нажмите 'Подтвердить'"
+    )
+    await show_students_list(callback, state, "посетивших студентов")
+    await callback.message.answer("Посетили занятие", reply_markup=keyboard)
+    msg_id = await callback.message.answer("Студенты: ")
+    await state.update_data(msg_id=msg_id.message_id)
+    await state.set_state(RateVisit.choose_student)
+
+
+@dp.callback_query(RateVisit.choose_student)
+async def rate_visit_choose_student(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    msg_id = data.get("msg_id")
+
+    visited_list = data.get("visited_list")
+    visited_student = callback.data
+    if visited_student != "back":
+        if visited_student not in visited_list:
+            visited_list.append(visited_student)
+        else:
+            visited_list.remove(visited_student)
+        visited_list_text = "Студенты:\n" + "\n".join(visited_list)
+        await state.update_data(visited_list=visited_list)
+        await bot(EditMessageText(text=visited_list_text, chat_id=callback.from_user.id, message_id=msg_id))
+
+
+@dp.message(RateVisit.choose_student)
+async def rate_visit_finish(message: Message, state: FSMContext):
+    data = await state.get_data()
+    visited_list: list = data.get("visited_list")
+    event = select_event_by_id(data['event_id'])
+
+    for student_text in visited_list:
+        student = find_student_by_surname(student_text)
+        print(student)
+        if not check_grade_for_event_by_student(data['event_id'], student):
+            await message.answer(text=f"Студенту {student.surname} выставлена оценка за {event[0]} {event[1]}")
+            insert("grades", [student.id, 1, data['event_id']])
+        else:
+            await message.answer(text=f"У студента {student.surname} уже есть оценка за {event[0]} {event[1]}")
+
+    kb = InlineKeyboardBuilder()
+    buttons = [
+        InlineKeyboardButton(text="Выбрать звено", callback_data="choose_zveno"),
+        InlineKeyboardButton(text="В начало", callback_data="to_start"),
+    ]
+    for button in buttons:
+        kb.add(button)
+    await message.answer(text="Выберите следующее действие", reply_markup=kb.as_markup())
+    await state.set_state(RateVisit.finish)
+
+
 async def main(token: str) -> None:
+    global bot
     if token == "test":
         bot = Bot(TEST_TOKEN, parse_mode=ParseMode.HTML)
         await dp.start_polling(bot)
