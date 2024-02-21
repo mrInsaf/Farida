@@ -34,7 +34,7 @@ def create_grades_table_of_group(group_name: str, date: str) -> str:
     for month_grade in month_grades:
         main_df.at[month_grade[0], f"За {months[int(date) - 1]}"] = month_grade[1]
     for student in students:
-        grades = select_grades_by_student(student)
+        grades = select_grades_by_student(student, group_name)
         for grade in grades:
             event = f"{mark_types[grade[1]]} {grade[2][:-5]}"
             print(event)

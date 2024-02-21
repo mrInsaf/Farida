@@ -139,8 +139,8 @@ def select_grades_by_group_id(group_id: str):
     )
 
 
-def select_grades_by_student(surname: str):
-    student = find_student_by_surname_and_group_id(surname)
+def select_grades_by_student(surname: str, group_id: str):
+    student = find_student_by_surname_and_group_id(surname, group_id)
     student_id = student.id
     return select(
         f'select value, e.type, e.date from grades g '
