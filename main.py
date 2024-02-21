@@ -14,16 +14,17 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.methods.send_message import SendMessage
 from aiogram.types import FSInputFile
 import sqlite3
-import datetime
+from datetime import date
 
+from misc.plot_grades_by_zveno import send_plot
 from states import *
-from db import *
 from models import *
 from add_group import *
 from show_grades import *
 from MarkTypes import mark_types
 from authorised_users import authorised_users
 from crypt import *
+from misc.show_lists import *
 
 import sys
 import os
@@ -66,101 +67,7 @@ keyboard_events = [
 ]
 
 
-def create_kb():
-    kb = InlineKeyboardBuilder()
-    cancel_button = InlineKeyboardButton(text="Назад", callback_data=f'back', )
-    kb.add(cancel_button)
-    return kb
 
-
-async def show_student_list(message: Message) -> bool:
-    student_list = find_student_by_surname(message.text)
-    kb = create_kb()
-    if not student_list:
-        await message.answer(text="Такой студент не найден, попробуйте еще раз", reply_markup=kb.as_markup())
-    else:
-        for student in student_list:
-            str_lst = [str(element) for element in student]
-            student_string = ' '.join(str_lst)
-            kb.add(InlineKeyboardButton(text=student_string, callback_data=student_string))
-            kb.adjust(1)
-            await message.answer(
-                text="Найдены следующие студенты",
-                reply_markup=kb.as_markup()
-            )
-            return True
-
-
-async def show_groups_list(callback: CallbackQuery):
-    kb = create_kb()
-
-    teacher_id = callback.from_user.id
-    print(teacher_id)
-    groups = select_groups_by_teacher_id(teacher_id)
-    for group in groups:
-        kb.add(InlineKeyboardButton(text=group[0], callback_data=str(group[1])))
-    kb.adjust(1)
-    await callback.message.answer(text="Выберите группу", reply_markup=kb.as_markup())
-
-
-async def show_zveno_list(callback: CallbackQuery, state: FSMContext):
-    kb = create_kb()
-    if callback.data != "back" and callback.data != "choose_zveno":
-        group = callback.data
-        await state.update_data(group=group)
-    else:
-        data = await state.get_data()
-        group = data['group']
-
-    students = select_students_by_group_id(group)
-    group_size = 4
-    grouped_students = [students[i:i + group_size] for i in range(0, len(students), group_size)]
-    await state.update_data(grouped_students=grouped_students)
-
-    for i in range(len(grouped_students)):
-        kb.add(InlineKeyboardButton(text=f"Звено {i + 1}", callback_data=str(i)))
-    kb.adjust(1)
-    await callback.message.answer(text="Выберите звено", reply_markup=kb.as_markup())
-
-
-async def show_students_list(callback: CallbackQuery, state: FSMContext, text: str = "студента"):
-    kb = create_kb()
-    data = await state.get_data()
-    if callback.data != "choose_another_student" and callback.data != "back":
-        zveno = int(callback.data)
-        await state.update_data(zveno=zveno)
-    else:
-        zveno = data['zveno']
-    grouped_students = data['grouped_students']
-
-    for student in grouped_students[zveno]:
-        kb.add(InlineKeyboardButton(text=student, callback_data=student))
-    kb.adjust(1)
-    await callback.message.answer(text=f"Выберите {text}", reply_markup=kb.as_markup())
-
-
-async def show_event_list(callback: CallbackQuery, state: FSMContext, visit: bool):
-    kb = create_kb()
-
-    if callback.data != "back":
-        if not visit:
-            student = find_student_by_surname(callback.data)
-            await state.update_data(student=student)
-
-
-    events = select_all_events_by_teacher_id(callback.from_user.id)
-
-    current_date = datetime.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
-    upcoming_events = [event for event in events if datetime.datetime.strptime(event[2], "%d.%m.%Y") >= current_date]
-
-    for event in upcoming_events:
-        btn_text = f"{event[2]} {mark_types[event[1]]}"
-        callback_data = str(event[0])
-        kb.add(
-            InlineKeyboardButton(text=btn_text, callback_data=callback_data)
-        )
-    kb.adjust(1)
-    await callback.message.answer(text="Выберите оцениваемое событие", reply_markup=kb.as_markup())
 
 
 @dp.callback_query(F.data == "to_start")
@@ -168,6 +75,7 @@ async def show_event_list(callback: CallbackQuery, state: FSMContext, visit: boo
 @dp.callback_query(F.data == "back", ShowGrades.choose_group)
 @dp.callback_query(F.data == "back", CreateEvent.choose_type)
 @dp.callback_query(F.data == "back", RateVisit.choose_group)
+@dp.callback_query(F.data == "back", PlotGrades.choose_group)
 async def start_command(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(StartState.start_state)
     kb = create_kb()
@@ -175,6 +83,7 @@ async def start_command(callback: types.CallbackQuery, state: FSMContext):
         InlineKeyboardButton(text="Выставить оценку", callback_data="rate"),
         InlineKeyboardButton(text="Выставить посещение", callback_data="rate_visit"),
         InlineKeyboardButton(text="Посмотреть оценки", callback_data="show_grades"),
+        InlineKeyboardButton(text="Построить график оценок по звеньям", callback_data="plot_grades_by_zveno"),
         InlineKeyboardButton(text="Создать событие", callback_data="create_event"),
         InlineKeyboardButton(text="Добавить группу", callback_data="add_group"),
         InlineKeyboardButton(text="Выйти", callback_data="exit"),
@@ -204,6 +113,7 @@ async def start_command(message: types.Message, state: FSMContext):
                 InlineKeyboardButton(text="Выставить оценку", callback_data="rate"),
                 InlineKeyboardButton(text="Выставить посещение", callback_data="rate_visit"),
                 InlineKeyboardButton(text="Посмотреть оценки", callback_data="show_grades"),
+                InlineKeyboardButton(text="Построить график оценок по звеньям", callback_data="plot_grades_by_zveno"),
                 InlineKeyboardButton(text="Создать событие", callback_data="create_event"),
                 InlineKeyboardButton(text="Добавить группу", callback_data="add_group"),
                 InlineKeyboardButton(text="Выйти", callback_data="exit"),
@@ -383,8 +293,8 @@ async def create_event_choose_date(message: types.Message, state: FSMContext):
             print(ex)
             await message.answer(text="Неправильная дата.\nВведите дату в формате дд.мм.гггг")
     else:
-        date = datetime.date.today()
-        await state.update_data(date=date.strftime("%d.%m.%Y"))
+        _date = date.today()
+        await state.update_data(date=_date.strftime("%d.%m.%Y"))
         await state.set_state(CreateEvent.finish)
         await create_event_finish(message, state)
 
@@ -579,11 +489,12 @@ async def rate_visit_choose_student(callback: CallbackQuery, state: FSMContext):
 @dp.message(RateVisit.choose_student)
 async def rate_visit_finish(message: Message, state: FSMContext):
     data = await state.get_data()
+    group_id = data['group']
     visited_list: list = data.get("visited_list")
     event = select_event_by_id(data['event_id'])
 
     for student_text in visited_list:
-        student = find_student_by_surname(student_text)
+        student = find_student_by_surname_and_group_id(student_text, group_id)
         print(student)
         if not check_grade_for_event_by_student(data['event_id'], student):
             await message.answer(text=f"Студенту {student.surname} выставлена оценка за {event[0]} {event[1]}")
@@ -602,6 +513,20 @@ async def rate_visit_finish(message: Message, state: FSMContext):
     await state.set_state(RateVisit.finish)
 
 
+@dp.callback_query(F.data == "plot_grades_by_zveno")
+async def plot_grades_start(callback: CallbackQuery, state: FSMContext):
+    await show_groups_list(callback)
+    await state.set_state(PlotGrades.choose_group)
+
+
+@dp.callback_query(PlotGrades.choose_group)
+async def plot_grades_plot(callback: CallbackQuery, state: FSMContext):
+    group = callback.data
+    grouped_students = await group_students_into_zveno(group, state)
+    print(group)
+    await send_plot(callback, grouped_students, group)
+
+
 async def main(token: str) -> None:
     global bot
     if token == "test":
@@ -618,3 +543,13 @@ if __name__ == "__main__":
     else:
         TOKEN = sys.argv[1]
         asyncio.run(main(TOKEN))
+
+# async def main(token: str) -> None:
+#     global bot
+#     bot = Bot(TEST_TOKEN, parse_mode=ParseMode.HTML)
+#     await dp.start_polling(bot)
+#
+#
+# if __name__ == "__main__":
+#     TOKEN = TEST_TOKEN
+#     asyncio.run(main(TOKEN))

@@ -36,11 +36,11 @@ def insert(table_name: str, data_list: list, auto_increment_id: int = 1):
 
 
 
-def find_student_by_surname(surname: str):
+def find_student_by_surname_and_group_id(surname: str, group_id: str):
     student_data = select(
         f'''select s.id, surname, group_name, group_id from students s 
             join groups g on g.id = s.group_id
-            where surname = "{surname}"''')[0]
+            where surname = "{surname}" and group_id = {group_id}''')[0]
     return Student(*student_data)
 
 
@@ -109,6 +109,13 @@ def select_groups_by_teacher_id(teacher_id: int):
     ''')
 
 
+def select_group_name_by_id(group_id: str):
+    return select(f'''
+    select name from groups 
+    where id = {group_id}
+''')[0][0]
+
+
 def select_students_by_group_id(group_id: str) -> list:
     lst = select(
         f'''
@@ -133,7 +140,7 @@ def select_grades_by_group_id(group_id: str):
 
 
 def select_grades_by_student(surname: str):
-    student = find_student_by_surname(surname)
+    student = find_student_by_surname_and_group_id(surname)
     student_id = student.id
     return select(
         f'select value, e.type, e.date from grades g '

@@ -14,4 +14,4 @@ mark_types = {
 
 student = Student("281", "СалаховИ. М.", 'biv202', "2")
 
-print(check_grade_for_event_by_student("50", student))
+print(select_group_name_by_id("23"))

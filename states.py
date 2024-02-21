@@ -59,3 +59,6 @@ class RateVisit(StatesGroup):
     choose_student = State()
     finish = State()
 
+
+class PlotGrades(StatesGroup):
+    choose_group = State()
