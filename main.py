@@ -54,6 +54,7 @@ max_scores = {
     "exam": 40,
     "z_contr": 30,
     "z_sem": 6,
+    "z_test": 6,
     "z_cross": 4,
     "shtraf": 0
 }
