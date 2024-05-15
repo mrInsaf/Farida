@@ -43,6 +43,8 @@ dp = Dispatcher()
 
 bot = None
 
+logging.basicConfig(filename='app.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
 max_scores = {
     "sem": 8,
     "conspect": 8,
@@ -131,6 +133,7 @@ async def start_command(message: types.Message, state: FSMContext):
 @dp.callback_query(F.data == "export_logs")
 async def export_logs(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer_document(FSInputFile("nohup.out"))
+    await callback.message.answer_document(FSInputFile("app.log"))
 
 
 @dp.callback_query(F.data == "rate")
@@ -552,8 +555,13 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python main.py <token>")
     else:
-        TOKEN = sys.argv[1]
-        asyncio.run(main(TOKEN))
+        try:
+            TOKEN = sys.argv[1]
+            asyncio.run(main(TOKEN))
+        except Exception as e:
+            logging.exception(f"Произошла ошибка: {e}")
+            print(f"Произошла ошибка: {e}")
+
 
 # async def main(token: str) -> None:
 #     global bot
