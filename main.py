@@ -119,8 +119,18 @@ async def start_command(message: types.Message, state: FSMContext):
                 InlineKeyboardButton(text="Добавить группу", callback_data="add_group"),
                 InlineKeyboardButton(text="Выйти", callback_data="exit"),
             )
+
+            if message.from_user.id == 816831722:
+                kb.add(
+                    InlineKeyboardButton(text="Посмотреть логи", callback_data="export_logs"),
+                )
             kb.adjust(1)
     await message.answer(text="Выберите действие", reply_markup=kb.as_markup())
+
+
+@dp.callback_query(F.data == "export_logs")
+async def export_logs(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer_document(FSInputFile("nohup.out"))
 
 
 @dp.callback_query(F.data == "rate")
