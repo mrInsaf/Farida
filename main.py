@@ -299,7 +299,7 @@ async def create_event_choose_date(message: types.Message, state: FSMContext):
     date_string = message.text.title()
     if date_string != "Сегодня":
         try:
-            datetime.datetime.strptime(date_string, "%d.%m.%Y")
+            datetime.strptime(date_string, "%d.%m.%Y")
             await state.update_data(date=date_string)
             await state.set_state(CreateEvent.finish)
             await create_event_finish(message, state)

@@ -26,7 +26,13 @@ def create_grades_table_of_group(group_name: str, date: str) -> str:
     events = select_type_and_date_events_by_group_id(group_name)
     students = select_students_by_group_id(group_name)
     # Формирование заголовков таблицы, включая столбцы "За все время" и "За указанный месяц"
-    columns = ["За все время", f"За {months[int(date) - 1]}"]
+    columns = [
+        "За все время",
+        f"За {months[int(date) - 1]}",
+        "За посещения",
+        "За конспекты",
+        "За СРС",
+    ]
     # Добавление событий в качестве дополнительных столбцов в таблицу
     events = [f"{mark_types[event[0]]} {event[1][:-5]}" for event in events]
     columns.extend(events)
@@ -35,6 +41,21 @@ def create_grades_table_of_group(group_name: str, date: str) -> str:
     # Получение оценок студентов за указанный месяц и за все время из базы данных
     month_grades = select_grades_by_month_and_group_id(month(date), group_name)
     total_grades = select_total_grades_by_group_id(group_name)
+    total_conspect_grades = select_total_conspect_by_group_id(group_name)
+    total_srs_grades = select_total_srs_by_group_id(group_name)
+    total_sem_grades = select_total_sem_by_group_id(group_name)
+
+    for total_conspect_grade in total_conspect_grades:
+        main_df.at[total_conspect_grade[0], f"За конспекты"] = total_conspect_grade[1]
+
+    for total_srs_grade in total_srs_grades:
+        main_df.at[total_srs_grade[0], f"За СРС"] = total_srs_grade[1]
+
+    for total_sem_grade in total_sem_grades:
+        main_df.at[total_sem_grade[0], f"За посещения"] = total_sem_grade[1]
+
+
+
     # Заполнение таблицы общими оценками за все время для каждого студента
     for total_grade in total_grades:
         main_df.at[total_grade[0], f"За все время"] = total_grade[1]

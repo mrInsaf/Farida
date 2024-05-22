@@ -33,9 +33,6 @@ def insert(table_name: str, data_list: list, auto_increment_id: int = 1):
     return row_id
 
 
-
-
-
 def find_student_by_surname_and_group_id(surname: str, group_id: str):
     student_data = select(
         f'''select s.id, surname, group_name, group_id from students s 
@@ -88,6 +85,7 @@ def calculate_score_of_student_by_event_type(student: Student, event_id: str):
         return 0
     else:
         return total_score[0][0]
+
 
 def select_teacher_id_by_name(teacher_name: str):
     return select(f'select id from teachers where name = "{teacher_name}"')[0][0]
@@ -186,6 +184,45 @@ def select_total_grades_by_group_id(group_id: str):
     )
 
 
+def select_total_conspect_by_group_id(group_id: str):
+    return select(
+        f"""
+        select surname, sum(value) from grades g
+        join students s on g.student_id = s.id
+        join groups gr on s.group_id = gr.id
+        join events e on g.event_id = e.id
+        where group_id = {group_id} and e.type = "conspect"
+        group by surname
+"""
+    )
+
+
+def select_total_srs_by_group_id(group_id: str):
+    return select(
+        f"""
+        select surname, sum(value) from grades g
+        join students s on g.student_id = s.id
+        join groups gr on s.group_id = gr.id
+        join events e on g.event_id = e.id
+        where group_id = {group_id} and e.type = "srs"
+        group by surname
+"""
+    )
+
+
+def select_total_sem_by_group_id(group_id: str):
+    return select(
+        f"""
+        select surname, sum(value) from grades g
+        join students s on g.student_id = s.id
+        join groups gr on s.group_id = gr.id
+        join events e on g.event_id = e.id
+        where group_id = {group_id} and e.type = "sem"
+        group by surname
+"""
+    )
+
+
 def select_total_grade_by_student(student_id: str):
     return select(f'select sum(value) from grades where student_id = {student_id}')[0][0]
 
@@ -214,13 +251,12 @@ def get_hashed_password(teacher_id: int):
 def authorise_teacher(teacher_id: int):
     current_datetime = datetime.now()
     formatted_datetime = current_datetime.strftime("%d.%m.%Y %H:%M:%S")
-    cursor.execute('UPDATE teachers SET is_authorised = 1, auth_dttm = ? WHERE teacher_id = ?', (formatted_datetime, teacher_id))
+    cursor.execute('UPDATE teachers SET is_authorised = 1, auth_dttm = ? WHERE teacher_id = ?',
+                   (formatted_datetime, teacher_id))
 
     # Применяем изменения
     conn.commit()
 
+
 def unauthorise_teacher(teacher_id: int):
     cursor.execute(f'UPDATE teachers SET is_authorised = 0 WHERE teacher_id = {teacher_id}')
-
-
-
