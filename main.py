@@ -2,6 +2,7 @@ import asyncio
 import logging
 import sys
 from aiogram import Bot, Dispatcher, Router, types
+from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.methods import EditMessageText
@@ -68,9 +69,6 @@ keyboard_events = [
     "z_test",
     "z_cross",
 ]
-
-
-
 
 
 @dp.callback_query(F.data == "to_start")
@@ -161,12 +159,14 @@ async def rate_student_choose(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(Rate.event_choose)
 @dp.callback_query(F.data == "back", Rate.finish)
 async def rate_event_choose(callback: CallbackQuery, state: FSMContext):
+    print("Выбор студента")
     await show_event_list(callback, state, False)
     await state.set_state(Rate.mark_choose)
 
 
 @dp.callback_query(Rate.mark_choose)
 async def rate_mark_choose(callback: CallbackQuery, state: FSMContext):
+    print("Выбор ивента")
     kb = create_kb()
     data = await state.get_data()
     event_id = callback.data
@@ -299,16 +299,18 @@ async def create_event_choose_date(message: types.Message, state: FSMContext):
     date_string = message.text.title()
     if date_string != "Сегодня":
         try:
-            datetime.strptime(date_string, "%d.%m.%Y")
-            await state.update_data(date=date_string)
+            parsed_date = datetime.strptime(date_string, "%d.%m.%Y")
+            # TODO Сделать перевод в корректный формат для MYSQL
+            await state.update_data(date=parsed_date)
             await state.set_state(CreateEvent.finish)
             await create_event_finish(message, state)
         except Exception as ex:
             print(ex)
             await message.answer(text="Неправильная дата.\nВведите дату в формате дд.мм.гггг")
     else:
+        print("Сегодня")
         _date = date.today()
-        await state.update_data(date=_date.strftime("%d.%m.%Y"))
+        await state.update_data(date=_date)
         await state.set_state(CreateEvent.finish)
         await create_event_finish(message, state)
 
@@ -316,8 +318,12 @@ async def create_event_choose_date(message: types.Message, state: FSMContext):
 @dp.message(CreateEvent.finish)
 async def create_event_finish(message: types.Message, state: FSMContext):
     data = await state.get_data()
+    input_date = data['date']
+    norm_date = input_date.strftime("%d.%m.%Y")
+    print(f"data is: {data}")
+    print(f"norm_date is: {norm_date}")
     insert("events", [data['type'], data['date'], message.from_user.id])
-    await message.answer(text=f"Событие {mark_types[data['type']]}, {data['date']} добавлено. Нажмите /start")
+    await message.answer(text=f"Событие {mark_types[data['type']]}, {norm_date} добавлено. Нажмите /start")
     await state.set_state(StartState.start_state)
 
 
@@ -544,10 +550,10 @@ async def plot_grades_plot(callback: CallbackQuery, state: FSMContext):
 async def main(token: str) -> None:
     global bot
     if token == "test":
-        bot = Bot(TEST_TOKEN, parse_mode=ParseMode.HTML)
+        bot = Bot(token=TEST_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
         await dp.start_polling(bot)
     else:
-        bot = Bot(MAIN_TOKEN, parse_mode=ParseMode.HTML)
+        bot = Bot(token=MAIN_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
         await dp.start_polling(bot)
 
 
@@ -561,7 +567,6 @@ if __name__ == "__main__":
         except Exception as e:
             logging.exception(f"Произошла ошибка: {e}")
             print(f"Произошла ошибка: {e}")
-
 
 # async def main(token: str) -> None:
 #     global bot

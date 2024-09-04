@@ -20,6 +20,7 @@ async def group_students_into_zveno(group, state) -> list:
     await state.update_data(grouped_students=grouped_students)
     return grouped_students
 
+
 async def show_student_list(message: Message) -> bool:
     student_list = find_student_by_surname_and_group_id(message.text)
     kb = create_kb()
@@ -91,13 +92,14 @@ async def show_event_list(callback: CallbackQuery, state: FSMContext, visit: boo
         if not visit:
             group_id = data['group']
             student = find_student_by_surname_and_group_id(callback.data, group_id)
+            print(f"student: {student}")
             await state.update_data(student=student)
 
-
     events = select_all_events_by_teacher_id(callback.from_user.id)
+    print(f"events: {events}")
 
     current_date = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
-    upcoming_events = [event for event in events if datetime.strptime(event[2], "%d.%m.%Y") >= current_date]
+    upcoming_events = [event for event in events if event[2] >= current_date.date()]
 
     for event in upcoming_events:
         btn_text = f"{event[2]} {mark_types[event[1]]}"
@@ -105,5 +107,6 @@ async def show_event_list(callback: CallbackQuery, state: FSMContext, visit: boo
         kb.add(
             InlineKeyboardButton(text=btn_text, callback_data=callback_data)
         )
+        print(f"Добавил кнопку")
     kb.adjust(1)
     await callback.message.answer(text="Выберите оцениваемое событие", reply_markup=kb.as_markup())

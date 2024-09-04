@@ -41,20 +41,23 @@ def select(query):
 
 
 def insert(table_name: str, data_list: list, auto_increment_id: int = 1):
+    print("Start insert")
+
     # Получаем информацию о столбцах в таблице
-    cursor.execute(f"PRAGMA table_info({table_name})")
-    columns = [column[1] for column in cursor.fetchall()]
-    columns = columns[auto_increment_id:]
-    # print(columns)
+    cursor.execute(f"SHOW COLUMNS FROM {table_name}")
+    columns = [column[0] for column in cursor.fetchall()]
+    columns = columns[auto_increment_id:]  # Убираем auto_increment, если нужно
+    print(columns)
 
     # Генерируем SQL-запрос для вставки данных
-    placeholders = ', '.join(['?'] * len(columns))
+    placeholders = ', '.join(['%s'] * len(columns))
     query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
 
     # Вставляем данные в таблицу
     cursor.execute(query, data_list)
     row_id = cursor.lastrowid
     conn.commit()
+    print("Finished insert")
     return row_id
 
 
