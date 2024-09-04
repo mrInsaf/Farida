@@ -559,7 +559,7 @@ async def main(token: str) -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python main.py <token>")
+        print("Usage: python farida.py <token>")
     else:
         try:
             TOKEN = sys.argv[1]
