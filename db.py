@@ -41,30 +41,33 @@ def select(query):
 
 
 def insert(table_name: str, data_list: list, auto_increment_id: int = 1):
-    print("Start insert")
+    try:
+        print("Start insert")
 
-    # Получаем информацию о столбцах в таблице
-    cursor.execute(f"SHOW COLUMNS FROM {table_name}")
-    columns = [column[0] for column in cursor.fetchall()]
-    columns = columns[auto_increment_id:]  # Убираем auto_increment, если нужно
-    print(columns)
+        # Получаем информацию о столбцах в таблице
+        cursor.execute(f"SHOW COLUMNS FROM {table_name}")
+        columns = [column[0] for column in cursor.fetchall()]
+        columns = columns[auto_increment_id:]  # Убираем auto_increment, если нужно
+        print(columns)
 
-    # Генерируем SQL-запрос для вставки данных
-    placeholders = ', '.join(['%s'] * len(columns))
-    query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
+        # Генерируем SQL-запрос для вставки данных
+        placeholders = ', '.join(['%s'] * len(columns))
+        query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
 
-    # Вставляем данные в таблицу
-    cursor.execute(query, data_list)
-    row_id = cursor.lastrowid
-    conn.commit()
-    print("Finished insert")
-    return row_id
+        # Вставляем данные в таблицу
+        cursor.execute(query, data_list)
+        row_id = cursor.lastrowid
+        conn.commit()
+        print("Finished insert")
+        return row_id
+    except Exception as e:
+        print(f"Исключение при insert: {e}")
 
 
 def find_student_by_surname_and_group_id(surname: str, group_id: str):
     student_data = select(
         f'''select s.id, surname, group_name, group_id from students s 
-            join`groups` g on g.id = s.group_id
+            join `groups` g on g.id = s.group_id
             where surname = "{surname}" and group_id = {group_id}''')[0]
     return Student(*student_data)
 
@@ -120,16 +123,16 @@ def select_teacher_id_by_name(teacher_name: str):
 
 
 def add_group_to_db(group_name: str, teacher_id: int):
-    return insert("groups", [group_name, teacher_id])
+    return insert("`groups`", [group_name, teacher_id])
 
 
 def select_last_group_id():
-    return select(f'select max(id) from`groups`')
+    return select(f'select max(id) from `groups`')
 
 
 def select_groups_by_teacher_id(teacher_id: int):
     return select(f'''
-    select g.name, g.id from`groups` g
+    select g.name, g.id from `groups` g
     join teachers t on g.teacher_id = t.teacher_id
     where t.teacher_id = "{teacher_id}"
     ''')
@@ -137,7 +140,7 @@ def select_groups_by_teacher_id(teacher_id: int):
 
 def select_group_name_by_id(group_id: str):
     return select(f'''
-    select name from`groups` 
+    select name from  `groups` 
     where id = {group_id}
 ''')[0][0]
 
@@ -146,7 +149,7 @@ def select_students_by_group_id(group_id: str) -> list:
     lst = select(
         f'''
         select surname from students s 
-         join`groups` g on s.group_id = g.id
+         join `groups` g on s.group_id = g.id
          where group_id = {group_id}
         
         ''')
@@ -159,7 +162,7 @@ def select_grades_by_group_id(group_id: str):
         f"""select s.surname, value, e.type, e.date from grades g 
         join students s on g.student_id = s.id 
         join events e on g.event_id = e.id
-        join`groups` gr on s.group_id = gr.id
+        join `groups` gr on s.group_id = gr.id
         where group_id = {group_id}
         order by date"""
     )
@@ -193,7 +196,7 @@ def select_grades_by_month_and_group_id(month: str, group_id: str):
             WHERE date LIKE "%.{month}.____"
         ) me ON g.event_id = me.id
         JOIN students s ON g.student_id = s.id
-        join`groups` gr on s.group_id = gr.id
+        join `groups` gr on s.group_id = gr.id
         WHERE group_id = {group_id}
         GROUP BY student_id
         '''
@@ -205,7 +208,7 @@ def select_total_grades_by_group_id(group_id: str):
         f"""
         select surname, sum(value) from grades g
         join students s on g.student_id = s.id
-        join`groups` gr on s.group_id = gr.id
+        join `groups` gr on s.group_id = gr.id
         where group_id = {group_id}
         group by surname
         """
@@ -217,7 +220,7 @@ def select_total_conspect_by_group_id(group_id: str):
         f"""
         select surname, sum(value) from grades g
         join students s on g.student_id = s.id
-        join`groups` gr on s.group_id = gr.id
+        join `groups` gr on s.group_id = gr.id
         join events e on g.event_id = e.id
         where group_id = {group_id} and e.type = "conspect"
         group by surname
@@ -230,7 +233,7 @@ def select_total_srs_by_group_id(group_id: str):
         f"""
         select surname, sum(value) from grades g
         join students s on g.student_id = s.id
-        join`groups` gr on s.group_id = gr.id
+        join `groups` gr on s.group_id = gr.id
         join events e on g.event_id = e.id
         where group_id = {group_id} and e.type = "srs"
         group by surname
@@ -243,7 +246,7 @@ def select_total_sem_by_group_id(group_id: str):
         f"""
         select surname, sum(value) from grades g
         join students s on g.student_id = s.id
-        join`groups` gr on s.group_id = gr.id
+        join `groups` gr on s.group_id = gr.id
         join events e on g.event_id = e.id
         where group_id = {group_id} and e.type = "sem"
         group by surname
