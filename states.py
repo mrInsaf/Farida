@@ -40,6 +40,11 @@ class AddGroup(StatesGroup):
     finish = State()
 
 
+class DeleteGroup(StatesGroup):
+    choose_group = State()
+    confirm_delete = State()
+
+
 class CreateEvent(StatesGroup):
     choose_type = State()
     choose_date = State()

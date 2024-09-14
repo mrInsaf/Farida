@@ -87,6 +87,7 @@ async def start_command(callback: types.CallbackQuery, state: FSMContext):
         InlineKeyboardButton(text="Построить график оценок по звеньям", callback_data="plot_grades_by_zveno"),
         InlineKeyboardButton(text="Создать событие", callback_data="create_event"),
         InlineKeyboardButton(text="Добавить группу", callback_data="add_group"),
+        InlineKeyboardButton(text="Удалить группу", callback_data="delete_group"),
         InlineKeyboardButton(text="Выйти", callback_data="exit"),
     )
     kb.adjust(1)
@@ -117,6 +118,7 @@ async def start_command(message: types.Message, state: FSMContext):
                 InlineKeyboardButton(text="Построить график оценок по звеньям", callback_data="plot_grades_by_zveno"),
                 InlineKeyboardButton(text="Создать событие", callback_data="create_event"),
                 InlineKeyboardButton(text="Добавить группу", callback_data="add_group"),
+                InlineKeyboardButton(text="Удалить группу", callback_data="delete_group"),
                 InlineKeyboardButton(text="Выйти", callback_data="exit"),
             )
 
@@ -545,6 +547,42 @@ async def plot_grades_plot(callback: CallbackQuery, state: FSMContext):
     grouped_students = await group_students_into_zveno(group, state)
     print(group)
     await send_plot(callback, grouped_students, group)
+
+
+@dp.callback_query(F.data == "delete_group")
+async def delete_group_start(callback: CallbackQuery, state: FSMContext):
+    await show_groups_list(callback)
+    await state.set_state(DeleteGroup.choose_group)
+
+
+@dp.callback_query(DeleteGroup.choose_group)
+async def delete_group_choose_group(callback: CallbackQuery, state: FSMContext):
+    kb = create_kb()
+    kb.add(
+        InlineKeyboardButton(text="Подтвердить", callback_data="accept"),
+        InlineKeyboardButton(text="Отклонить", callback_data="reject")
+    )
+    kb.adjust(1)
+    group_id = int(callback.data)
+    await state.update_data(group_id=group_id)
+    group_name = select_group_name_by_id(str(group_id))
+    await callback.message.answer(text=f"Удалить группу {group_name}?", reply_markup=kb.as_markup())
+    await state.set_state(DeleteGroup.confirm_delete)
+
+
+@dp.callback_query(DeleteGroup.confirm_delete)
+async def delete_group_confirm_delete(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    group_id = data['group_id']
+    if callback.data == "accept":
+        try:
+            delete_group_by_id(group_id)
+            await callback.message.answer(text="Группа удалена\n\nДля перехода на старт нажмите /start")
+        except Exception as e:
+            print(f"Произошла ошибка при удалении группы: {e}")
+            await callback.message.answer(text="Что-то пошло не так")
+    else:
+        await callback.message.answer(text="Для перехода на старт нажмите /start")
 
 
 async def main(token: str) -> None:

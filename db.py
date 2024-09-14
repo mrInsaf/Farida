@@ -18,17 +18,35 @@ pool = pooling.MySQLConnectionPool(
     pool_size=5,
     **config
 )
+print("Создал пул соединений")
 
 
 def get_connection():
     try:
         connection = pool.get_connection()
         if connection.is_connected():
-            print("Успешное подключение к базе данных")
+            print("Соединение успешно установлено.")
             return connection
+        else:
+            raise Exception("Не удалось подключиться к базе данных: соединение не активно.")
     except mysql.connector.Error as e:
         print(f"Ошибка подключения: {e}")
         return None
+
+
+
+def execute_query(query):
+    conn = get_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute(query)
+            conn.commit()
+        finally:
+            cursor.close()
+            conn.close()  # Возвращает соединение в пул
+    else:
+        raise Exception("Не удалось установить соединение с базой данных")
 
 
 def select(query):
@@ -49,8 +67,6 @@ def select(query):
 
 def insert(table_name: str, data_list: list, auto_increment_id: int = 1):
     try:
-        print("Start insert")
-
         # Получаем соединение из пула
         conn = get_connection()
         if conn:
@@ -58,16 +74,13 @@ def insert(table_name: str, data_list: list, auto_increment_id: int = 1):
                 cursor = conn.cursor()
                 cursor.execute(f"SHOW COLUMNS FROM {table_name}")
                 columns = [column[0] for column in cursor.fetchall()]
-                columns = columns[auto_increment_id:]  # Убираем auto_increment, если нужно
-                print(columns)
-
+                columns = columns[auto_increment_id:]
                 placeholders = ', '.join(['%s'] * len(columns))
                 query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
 
                 cursor.execute(query, data_list)
                 row_id = cursor.lastrowid
                 conn.commit()
-                print("Finished insert")
                 return row_id
             except Exception as e:
                 print(f"Исключение при insert: {e}")
@@ -337,3 +350,20 @@ def unauthorise_teacher(teacher_id: int):
             conn.close()  # Возвращает соединение в пул
     else:
         print("Не удалось получить соединение.")
+
+
+def delete_group_by_id(group_id: int):
+    execute_query(
+        f"""DELETE g FROM grades g
+            JOIN students s ON g.student_id = s.id
+            WHERE s.group_id = {group_id};"""
+    )
+    execute_query(
+        f"""DELETE FROM students
+            WHERE group_id = {group_id};"""
+    )
+    execute_query(
+        f"""DELETE FROM `groups`
+            WHERE id = {group_id};"""
+    )
+
