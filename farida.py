@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import sys
+import traceback
+
 from aiogram import Bot, Dispatcher, Router, types
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -383,10 +385,16 @@ async def show_grades_finish(callback: CallbackQuery, state: FSMContext):
         ]
     )
     month = callback.data
+    print(f"month {month}")
     data = await state.get_data()
     group = data['group']
-    summary_path = create_grades_table_of_group(group, month)
+    try:
+        summary_path = create_grades_table_of_group(group, month)
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+        traceback.print_exc()
     file = FSInputFile(summary_path)
+    print("Сейчас отправлю таблицу")
     await callback.message.answer_document(file, reply_markup=kb.as_markup())
 
 

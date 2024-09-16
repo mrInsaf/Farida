@@ -22,6 +22,7 @@ months = [
 
 # Функция формирования таблицы с оценками для определенной группы и месяца
 def create_grades_table_of_group(group_name: str, date: str) -> str:
+    print("Начал создавать таблицу")
     # Получение списка событий и студентов для данной группы из базы данных
     events = select_type_and_date_events_by_group_id(group_name)
     students = select_students_by_group_id(group_name)
@@ -34,7 +35,10 @@ def create_grades_table_of_group(group_name: str, date: str) -> str:
         "За СРС",
     ]
     # Добавление событий в качестве дополнительных столбцов в таблицу
-    events = [f"{mark_types[event[0]]} {event[1][:-5]}" for event in events]
+    print(f"events: {events}")
+    for event in events:
+        print(f"event_date: {type(event[1])}")
+    events = [f"{mark_types[event[0]]} {event[1].strftime('%d-%m')}" for event in events]
     columns.extend(events)
     # Создание пустой таблицы с индексами студентов и указанными столбцами
     main_df = pd.DataFrame(index=students, columns=columns)
@@ -66,7 +70,7 @@ def create_grades_table_of_group(group_name: str, date: str) -> str:
     for student in students:
         grades = select_grades_by_student(student, group_name)
         for grade in grades:
-            event = f"{mark_types[grade[1]]} {grade[2][:-5]}"  # Формирование названия события (тип и дата)
+            event = f"{mark_types[grade[1]]} {grade[2].strftime('%d-%m')}"
             value = grade[0]  # Значение оценки
             row_label, column_name = student, event  # Получение меток строк и столбцов
             main_df.at[row_label, column_name] = value  # Заполнение ячейки таблицы оценкой
@@ -75,6 +79,7 @@ def create_grades_table_of_group(group_name: str, date: str) -> str:
     summary_path = f"Summaries/Отчет_{group_name}---{current_time}.xlsx"
     # Сохранение таблицы в файл Excel
     main_df.to_excel(summary_path)
+    print("ЗАкончил создавать таблицу")
 
     return summary_path  # Возврат пути к сохраненному файлу
 
