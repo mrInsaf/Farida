@@ -53,7 +53,7 @@ dp = Dispatcher()
 
 bot = None
 
-logging.basicConfig(filename='app.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+# logging.basicConfig(filename='app.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 max_scores = {
     "sem": 8,
