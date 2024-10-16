@@ -7,10 +7,12 @@ from mysql.connector import Error, pooling
 
 # Параметры подключения к базе данных MySQL
 config = {
-    'user': 'stepan',
-    'password': 'stepan',
-    'host': '185.50.202.243',
+    'user': 'lesha',
+    'password': 'alexei',
+    'host': '45.151.31.119',
     'database': 'farida',
+    'port': 3306,
+    'raise_on_warnings': True,
 }
 
 pool = pooling.MySQLConnectionPool(
