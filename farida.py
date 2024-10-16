@@ -32,6 +32,8 @@ from misc.show_lists import *
 import sys
 import os
 
+print("Ну че народ")
+
 # Получаем путь к текущему каталогу
 current_dir = os.path.dirname(os.path.realpath(__file__))
 
