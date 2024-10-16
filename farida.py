@@ -602,6 +602,7 @@ async def delete_group_confirm_delete(callback: CallbackQuery, state: FSMContext
 
 async def main(token: str) -> None:
     print("Ну че народ погнали ")
+    logging.info("Ну че народ погнали.")
     global bot
     if token == "test":
         bot = Bot(token=TEST_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
