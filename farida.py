@@ -594,6 +594,7 @@ async def delete_group_confirm_delete(callback: CallbackQuery, state: FSMContext
 
 
 async def main(token: str) -> None:
+    print("Ну че народ погнали ")
     global bot
     if token == "test":
         bot = Bot(token=TEST_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
@@ -604,6 +605,7 @@ async def main(token: str) -> None:
 
 
 if __name__ == "__main__":
+    print("Ну че народ погнали нах")
     if len(sys.argv) != 2:
         print("Usage: python farida.py <token>")
     else:
