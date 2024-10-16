@@ -619,7 +619,9 @@ if __name__ == "__main__":
         try:
             TOKEN = sys.argv[1]
             asyncio.run(main(TOKEN))
+            logging.info("Бот запущен.")
         except Exception as e:
+            logging.error("Ошибка при запуске бота: %s", e)
             logging.exception(f"Произошла ошибка: {e}")
             print(f"Произошла ошибка: {e}")
 
