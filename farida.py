@@ -1,5 +1,9 @@
-import asyncio
 import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Вывод информации при запуске бота
+logging.info("Запуск бота...")
+import asyncio
 import sys
 import traceback
 
@@ -31,6 +35,7 @@ from misc.show_lists import *
 
 import sys
 import os
+
 
 print("Ну че народ")
 
