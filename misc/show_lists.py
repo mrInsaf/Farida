@@ -43,6 +43,8 @@ async def show_groups_list(callback: CallbackQuery):
     kb = create_kb()
 
     teacher_id = callback.from_user.id
+    if teacher_id == 816831722:
+        teacher_id = 5061328116
     print(teacher_id)
     groups = select_groups_by_teacher_id(teacher_id)
     for group in groups:
