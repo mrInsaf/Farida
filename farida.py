@@ -3,6 +3,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # Вывод информации при запуске бота
 logging.info("Запуск бота...")
+
 import asyncio
 import sys
 import traceback

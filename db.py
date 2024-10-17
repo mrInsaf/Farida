@@ -5,6 +5,7 @@ from models import Student
 import mysql
 from mysql.connector import Error, pooling
 
+print("я ща в db.py")
 # Параметры подключения к базе данных MySQL
 config = {
     'user': 'lesha',
