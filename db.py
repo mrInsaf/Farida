@@ -226,7 +226,7 @@ def select_grades_by_month_and_group_id(month: str, group_id: str):
         SELECT surname, SUM(value) FROM grades g
         JOIN (
             SELECT id FROM events
-            WHERE date LIKE "%.{month}.____"
+            WHERE date LIKE "____-{month}-%"
         ) me ON g.event_id = me.id
         JOIN students s ON g.student_id = s.id
         join `groups` gr on s.group_id = gr.id
